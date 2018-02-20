@@ -33,7 +33,7 @@ namespace Billing.API
             services.AddMvc();
             services.AddSwaggerGen(options =>
             {
-                options.SwaggerDoc("v1", new Info {Title = "My API", Version = "v1"});
+                options.SwaggerDoc("v1", new Info {Title = "Billing API", Version = "v1"});
             });
 
             var database = OpenDatabaseConnection(Configuration.GetConnectionString("billingDB"));
@@ -58,7 +58,7 @@ namespace Billing.API
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Billing API");
             });
         }
 
