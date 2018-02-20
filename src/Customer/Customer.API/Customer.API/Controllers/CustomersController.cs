@@ -18,6 +18,7 @@ namespace Customer.API.Controllers
         [ProducesResponseType((int) HttpStatusCode.OK)]
         public async Task<IActionResult> UpdateCustomer([FromBody] Model.Customer customer)
         {
+            // TODO save to repository
             var customerNameChangedEvent = new CustomerNameChangedEvent(customer.Id, customer.Name);
             await _bus.Publish(customerNameChangedEvent, "CustomerEvents");
             return Ok();
