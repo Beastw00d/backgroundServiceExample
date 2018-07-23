@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Mongo2Go;
 using MongoDB.Driver;
 using Platibus.AspNetCore;
 using Swashbuckle.AspNetCore.Swagger;
@@ -26,9 +27,18 @@ namespace Customer.API
                 options.SwaggerDoc("v1", new Info { Title = "Customer API", Version = "v1" });
             });
 
-            var database = OpenDatabaseConnection();
-            services.AddSingleton(database);
+            var connectionString = Configuration.GetConnectionString("customersDB");
 
+            if (Configuration.GetValue<bool>("UseMongo2Go"))
+            {
+
+                var runner = MongoDbRunner.StartForDebugging();
+                services.AddSingleton(runner);
+                connectionString = runner.ConnectionString + "customers";
+            }
+
+            var database = OpenDatabaseConnection(connectionString);
+            services.AddSingleton(database);
 
             var serviceProvider = services.BuildServiceProvider();
             services.AddPlatibusServices(configure: configuration =>
@@ -55,9 +65,8 @@ namespace Customer.API
 
         }
 
-        private IMongoDatabase OpenDatabaseConnection()
+        private IMongoDatabase OpenDatabaseConnection(string connectionString)
         {
-            var connectionString = Configuration.GetConnectionString("customersDB");
             var client = new MongoClient(connectionString);
             var mongoUrl = new MongoUrl(connectionString);
             var databaseName = mongoUrl.DatabaseName;
