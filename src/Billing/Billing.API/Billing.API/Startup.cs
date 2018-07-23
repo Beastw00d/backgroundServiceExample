@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Mongo2Go;
 using MongoDB.Driver;
 using Platibus;
-using Platibus.Config;
 using Platibus.Journaling;
 using Platibus.MongoDB;
 using Platibus.Serialization;
@@ -36,15 +36,31 @@ namespace Billing.API
                 options.SwaggerDoc("v1", new Info {Title = "Billing API", Version = "v1"});
             });
 
-            var database = OpenDatabaseConnection(Configuration.GetConnectionString("billingDB"));
-            services.AddSingleton(database);
+            var billingConnectionString = Configuration.GetConnectionString("billingDB");
+            var journalingConnectionString = Configuration.GetConnectionString("journalingDB");
+            if (Configuration.GetValue<bool>("UseMongo2Go"))
+            {
+                
+                var runner = MongoDbRunner.StartForDebugging();
+                services.AddSingleton(runner);
+                billingConnectionString = runner.ConnectionString + "billing";
+                journalingConnectionString = runner.ConnectionString + "journaling";
+            }
+
+            var billingDb = OpenDatabaseConnection(billingConnectionString);
+
+            var journalDb = OpenDatabaseConnection(journalingConnectionString);
+            var messageJournal =
+                new MongoDBMessageJournal(
+                    new MongoDBMessageJournalOptions(journalDb));
+            services.AddSingleton(billingDb);
             services.AddSingleton<IInvoiceRepository, MongoInvoiceRepository>();
             services.AddSingleton<IJournalingUpdateService, JournalingUpdateService>();
             services.AddSingleton<IJournalConsumerProgressTracker, MongoJournalConsumerProgressTracker>();
             services.AddSingleton<IMessageNamingService, DefaultMessageNamingService>();
             services.AddSingleton<ISerializationService, DefaultSerializationService>();
             services.AddSingleton<IHostedService, JournalingManagerService>();
-            services.AddSingleton<IMessageJournal>(sp => new MongoDBMessageJournal(new MongoDBMessageJournalOptions(OpenDatabaseConnection(Configuration.GetConnectionString("journalingDB")))));
+            services.AddSingleton<IMessageJournal>(sp => messageJournal);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

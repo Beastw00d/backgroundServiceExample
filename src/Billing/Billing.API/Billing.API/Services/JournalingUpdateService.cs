@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Billing.API.IntegrationEvents.Events;
 using Billing.API.IntegrationEvents.Processors;
 using Billing.API.Repositories;
+using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 using Platibus;
 using Platibus.Journaling;
@@ -18,7 +19,7 @@ namespace Billing.API.Services
         private readonly IJournalEventProcessor _eventProcessor;
         private readonly ISerializationService _serializationService;
         private readonly IMessageNamingService _messageNamingService;
-
+        
         private const string Id = "JournalEventProducer";
         private const int BatchSize = 50;
         private readonly MessageJournalFilter Filter = new MessageJournalFilter
@@ -31,7 +32,8 @@ namespace Billing.API.Services
             ISerializationService serializationService,
             IJournalConsumerProgressTracker tracker,
             IMongoDatabase database,
-            IMessageNamingService messageNamingService)
+            IMessageNamingService messageNamingService, 
+            IConfiguration configuration)
         {
             _messageJournal = messageJournal;
             _serializationService = serializationService;
@@ -39,6 +41,12 @@ namespace Billing.API.Services
             _messageNamingService = messageNamingService;
 
             _eventProcessor = new CustomerJournalEventProcessor(database);
+
+            // MessageJournalFilter does not work with mongo2 go
+            if (configuration.GetValue<bool>("UseMongo2Go"))
+            {
+                Filter = null;
+            }
         }
 
         public async Task Update(CancellationToken cancellationToken)
